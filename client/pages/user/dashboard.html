@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Dashboard</title>
+   <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>body { display:flex; flex-direction:column; min-height:100vh; }</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <div class="navbar-brand">
+    <img class="logo-img-dashboard" src="images/logo.png" alt="CampusTally Logo">
+    <div>
+      <div class="brand-name">CampusTally</div>
+      <div class="brand-sub">University Voting Platform</div>
+    </div>
+  </div>
+  <div class="navbar-actions">
+    <button class="icon-btn" onclick="toast('No new notifications')">🔔<span class="notif-dot"></span></button>
+  </div>
+</nav>
+
+<main class="page-content" id="main-content">
+  <!-- Rendered by JS -->
+</main>
+
+<nav class="bottom-nav">
+  <a href="./dashboard.html" class="bnav-item active"><span class="bnav-icon">⊞</span>Dashboard</a>
+  <a href="./elections.html" class="bnav-item"><span class="bnav-icon">🗳️</span>Elections</a>
+  <a href="./results.html"   class="bnav-item"><span class="bnav-icon">📊</span>Results</a>
+  <a href="./profile.html"   class="bnav-item"><span class="bnav-icon">👤</span>Profile</a>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  // Guard
+  var user = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  function render() {
+    var elections = getElections();
+    var active    = elections.filter(function(e) { return e.status === 'active'; });
+    var upcoming  = elections.filter(function(e) { return e.status === 'upcoming'; });
+    var html      = '';
+
+    // Welcome
+    html += '<div class="fade-in" style="margin-bottom:20px;">';
+    html += '<div style="font-size:14px;color:var(--text-muted);">Welcome back,</div>';
+    html += '<div style="font-family:\'Playfair Display\',serif;font-size:22px;font-weight:700;">' + user.name + '</div>';
+    html += '</div>';
+
+    // Active elections
+    active.forEach(function(el, i) {
+      var delay = (i * 0.06) + 0.05;
+      var voted  = hasVotedInElection(user.id, el.id);
+      var pos0   = el.positions[0];
+      var tally  = tallyPosition(el.id, 0, pos0.candidates.length);
+      var sorted = tally.slice().sort(function(a,b) { return b.votes - a.votes; });
+      var total  = tally.reduce(function(s, t) { return s + t.votes; }, 0);
+
+      var colors = ['fill-green','fill-red','fill-blue'];
+
+      html += '<div class="section-header fade-in" style="animation-delay:' + delay + 's;">';
+      html += '<span class="section-icon">' + (el.category === 'NUGS Election' ? '👥' : '🏛️') + '</span>';
+      html += '<span class="section-title">' + el.shortName + '</span>';
+      html += '<span class="badge badge-live" style="margin-left:auto;">LIVE</span></div>';
+
+      html += '<div class="card fade-in" style="animation-delay:' + (delay + 0.03) + 's;">';
+      html += '<div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:12px;">' + pos0.title + '</div>';
+
+      sorted.slice(0, 2).forEach(function(t, j) {
+        var cand = pos0.candidates[t.index];
+        var pct  = total > 0 ? t.pct : 0;
+        html += '<div class="progress-wrap' + (j > 0 ? ' style="margin-top:10px;"' : '') + '">';
+        html += '<div class="progress-label"><span style="font-size:14px;font-weight:600;">' + cand.name + '</span>';
+        html += '<span style="font-size:14px;font-weight:700;">' + pct + '%</span></div>';
+        html += '<div class="progress-bar"><div class="progress-fill ' + (colors[j] || 'fill-red') + '" style="width:' + pct + '%"></div></div>';
+        html += '</div>';
+      });
+
+      html += '<a href="voting.html?election=' + el.id + '" class="btn btn-primary" style="margin-top:16px;">';
+      html += voted ? '✅ Vote Again' : '🗳️ Vote Now';
+      html += '</a></div>';
+    });
+
+    // Upcoming
+    if (upcoming.length > 0) {
+      html += '<div class="section-header fade-in" style="animation-delay:.4s;">';
+      html += '<span class="section-icon">📅</span><span class="section-title">Upcoming Elections</span></div>';
+
+      upcoming.forEach(function(el, i) {
+        var msLeft  = new Date(el.startDate + 'T' + el.startTime).getTime() - Date.now();
+        var hrsLeft = Math.max(0, Math.floor(msLeft / 3600000));
+        var timerId = 'timer-' + el.id;
+        html += '<div class="upcoming-item fade-in" style="animation-delay:' + (0.42 + i * 0.05) + 's;">';
+        html += '<div class="upcoming-icon">⚙️</div>';
+        html += '<div class="upcoming-info"><div class="upcoming-name">' + el.shortName + '</div>';
+        html += '<div class="upcoming-sub">Starts in ' + (hrsLeft >= 48 ? Math.ceil(hrsLeft/24) + ' days' : hrsLeft + ' hours') + '</div></div>';
+        html += '<div class="upcoming-timer" id="' + timerId + '">' + String(Math.floor(hrsLeft)).padStart(2,'0') + ':00:00</div>';
+        html += '</div>';
+        setTimeout(function() { startCountdown(timerId, hrsLeft); }, 0);
+      });
+    }
+
+    document.getElementById('main-content').innerHTML = html;
+  }
+
+  render();
+</script>
+</body>
+</html>

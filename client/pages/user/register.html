@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Register</title>
+   <link rel="stylesheet" href="../../style/styles.css">
+
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="auth-screen" style="align-items:flex-start;padding-top:40px;">
+  <div style="width:100%;max-width:420px;margin:0 auto;">
+    <a href="../../index.html" class="back-btn" style="margin-bottom:16px;display:inline-flex;">←</a>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;" class="fade-in">
+      <div class="logo-sm"><span>🎓</span></div>
+      <div>
+        <div class="brand-name">CampusTally</div>
+        <div class="brand-sub">University Voting Platform</div>
+      </div>
+    </div>
+
+    <div class="fade-in" style="animation-delay:.05s;">
+      <div style="font-family:'Playfair Display',serif;font-size:28px;font-weight:700;margin-bottom:6px;">Student Registration</div>
+      <div style="font-size:14px;color:var(--text-muted);margin-bottom:24px;">Create an account to participate in SRC, NUGS, and departmental elections.</div>
+    </div>
+
+    <div class="auth-card fade-in" style="animation-delay:.1s;">
+      <div class="form-group">
+        <label for="reg-name">Full Name</label>
+        <div class="input-wrap">
+          <span class="icon">👤</span>
+          <input type="text" id="reg-name" placeholder="Enter your full name">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-id">Student ID</label>
+        <div class="input-wrap">
+          <span class="icon">🪪</span>
+          <input type="text" id="reg-id" placeholder="Enter your Student ID">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-index">Index Number</label>
+        <div class="input-wrap">
+          <span class="icon">🪪</span>
+          <input type="text" id="reg-index" placeholder="e.g. UEB1108022">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-course">Course / Department</label>
+        <div class="input-wrap">
+          <span class="icon">🎓</span>
+          <select id="reg-course">
+            <option value="">Select your course</option>
+            <option>B.Sc. Computer Engineering</option>
+            <option>B.Sc. Computer Science</option>
+            <option>B.Sc. Electrical Engineering</option>
+            <option>B.Sc. Mechanical Engineering</option>
+            <option>B.Sc. Civil Engineering</option>
+            <option>B.Sc. Business Administration</option>
+            <option>B.Sc. Economics</option>
+            <option>B.A. English</option>
+            <option>B.Sc. Nursing</option>
+            <option>B.Sc. Medicine &amp; Surgery</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-pw">Password</label>
+        <div class="input-wrap">
+          <span class="icon">🔒</span>
+          <input type="password" id="reg-pw" placeholder="Create a password">
+          <button class="eye" onclick="togglePw('reg-pw', this)">👁️</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="reg-pw2">Confirm Password</label>
+        <div class="input-wrap">
+          <span class="icon">🔒</span>
+          <input type="password" id="reg-pw2" placeholder="Confirm your password">
+          <button class="eye" onclick="togglePw('reg-pw2', this)">👁️</button>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="doRegister()">Create Account →</button>
+      <div class="auth-link" style="margin-top:16px;">Already have an account? <a href="../../index.html">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<script src="../../script/app.js"></script>
+<script>
+  // Auto-redirect if already logged in
+  if (getCurrentUser()) window.location.href = './dashboard.html';
+
+  function doRegister() {
+    var name   = document.getElementById('reg-name').value.trim();
+    var id     = document.getElementById('reg-id').value.trim();
+    var index  = document.getElementById('reg-index').value.trim();
+    var course = document.getElementById('reg-course').value;
+    var pw     = document.getElementById('reg-pw').value.trim();
+    var pw2    = document.getElementById('reg-pw2').value.trim();
+
+    if (!name || !id || !index || !course || !pw || !pw2) { toast('Please fill in all fields', 'error'); return; }
+    if (pw !== pw2) { toast('Passwords do not match', 'error'); return; }
+
+    var result = registerUser({ name: name, id: id, index: index, course: course, password: pw });
+    if (!result.ok) { toast(result.error, 'error'); return; }
+
+    toast('Account created successfully! 🎉', 'success');
+    setTimeout(function() { window.location.href = './dashboard.html'; }, 800);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Live Results</title>
+  <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .results-section-label { font-family:'Playfair Display',serif; font-size:18px; font-weight:700; color:var(--primary); padding:4px 0 12px; border-bottom:2px solid var(--primary); margin-bottom:16px; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <div class="navbar-brand">
+    <div class="brand-name">Live Results</div>
+  </div>
+  <div class="navbar-actions">
+    <button class="icon-btn" onclick="reload()" title="Refresh">🔄</button>
+  </div>
+</nav>
+
+<main class="page-content" id="main-content">
+  <!-- Rendered by JS -->
+</main>
+
+<nav class="bottom-nav">
+  <a href="./dashboard.html" class="bnav-item active"><span class="bnav-icon">⊞</span>Dashboard</a>
+  <a href="./elections.html" class="bnav-item"><span class="bnav-icon">🗳️</span>Elections</a>
+  <a href="./results.html"   class="bnav-item"><span class="bnav-icon">📊</span>Results</a>
+  <a href="./profile.html"   class="bnav-item"><span class="bnav-icon">👤</span>Profile</a>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  var user = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  var BAR_COLORS = ['var(--primary)', '#c0392b', '#e5928c', '#cbd5e1'];
+
+  function renderPositionCard(el, posIdx, statusBadge) {
+    var pos    = el.positions[posIdx];
+    var tally  = tallyPosition(el.id, posIdx, pos.candidates.length);
+    var total  = tally.reduce(function(s, t) { return s + t.votes; }, 0);
+    var sorted = tally.slice().sort(function(a,b) { return b.votes - a.votes; });
+    var winner = sorted[0];
+
+    var html = '<div class="result-card">';
+    html += '<div class="result-card-header"><div class="result-card-title">' + pos.title + '</div>' + statusBadge + '</div>';
+    html += '<div class="result-votes-counted">' + total.toLocaleString() + ' Votes Counted</div>';
+
+    tally.forEach(function(t, ci) {
+      var cand    = pos.candidates[t.index];
+      var isWin   = t.index === winner.index && total > 0;
+      var color   = BAR_COLORS[ci] || BAR_COLORS[BAR_COLORS.length - 1];
+      html += '<div class="result-candidate">';
+      html += '<div class="result-candidate-name" style="color:' + (isWin ? 'var(--primary)' : 'var(--text)') + ';">';
+      html += cand.name + (isWin && el.status === 'closed' ? ' ✅' : '') + (isWin ? ' 🏆' : '') + '</div>';
+      html += '<div class="result-pct">' + t.pct + '% (' + t.votes.toLocaleString() + ')</div>';
+      html += '<div class="result-bar"><div class="result-bar-fill" style="width:' + t.pct + '%;background:' + color + ';"></div></div>';
+      html += '</div>';
+    });
+
+    html += '</div>';
+    return html;
+  }
+
+  function render() {
+    var elections    = getElections().filter(function(e) { return e.status !== 'draft' && e.status !== 'upcoming'; });
+    var totalVotes   = getTotalVotesCast();
+    var html         = '';
+
+    // Total votes card
+    html += '<div class="total-votes-card fade-in">';
+    html += '<div class="total-votes-label">Total Votes Cast</div>';
+    html += '<div class="total-votes-num" id="total-count">' + totalVotes.toLocaleString() + '</div>';
+    html += '<div class="total-votes-change" id="vote-trend">↑ Live counting in progress</div>';
+    html += '</div>';
+
+    elections.forEach(function(el, i) {
+      var isLive  = el.status === 'active';
+      var badge   = isLive ? '<span class="badge badge-live">Live</span>' : '<span class="badge badge-closed">Final</span>';
+      var delay   = (i * 0.08) + 0.05;
+
+      html += '<div class="results-section-label fade-in" style="animation-delay:' + delay + 's;">' + el.shortName + '</div>';
+      el.positions.forEach(function(pos, pi) {
+        html += '<div class="fade-in" style="animation-delay:' + (delay + pi * 0.04) + 's;">' +
+                  renderPositionCard(el, pi, badge) +
+                '</div>';
+      });
+    });
+
+    document.getElementById('main-content').innerHTML = html;
+  }
+
+  function reload() {
+    render();
+    toast('Results refreshed ✅', 'success');
+  }
+
+  render();
+
+  // Auto-refresh every 15 seconds
+  setInterval(function() {
+    var el = document.getElementById('total-count');
+    if (el) el.textContent = getTotalVotesCast().toLocaleString();
+  }, 15000);
+</script>
+</body>
+</html>

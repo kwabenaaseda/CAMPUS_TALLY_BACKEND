@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Create Election</title>
+    <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    main { flex:1; padding:20px; padding-bottom:100px; max-width:600px; margin:0 auto; width:100%; }
+    .pos-count { font-size:11px; color:var(--text-muted); background:var(--bg2); padding:2px 8px; border-radius:10px; margin-left:8px; }
+    .section-sep { border:none; border-top:1px solid var(--border); margin:20px 0; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a href="./admin-dashboard.html" class="back-btn">←</a>
+    <div style="margin-left:10px;font-size:17px;font-weight:700;" id="page-title">Create Election</div>
+  </div>
+</nav>
+
+<main>
+  <!-- Basic info -->
+  <div class="form-group fade-in">
+    <label>Election Title</label>
+    <input type="text" class="no-icon" id="el-title" placeholder="e.g., School of Business Elections 2025">
+  </div>
+
+  <div class="form-group fade-in" style="animation-delay:.04s;">
+    <label>Short Name <span style="font-weight:400;color:var(--text-muted);font-size:12px;">(shown on dashboard)</span></label>
+    <input type="text" class="no-icon" id="el-short" placeholder="e.g., Business School">
+  </div>
+
+  <div class="form-group fade-in" style="animation-delay:.06s;">
+    <label>Category</label>
+    <select class="no-icon" id="el-category">
+      <option value="">Select Category</option>
+      <option>SRC Election</option>
+      <option>NUGS Election</option>
+      <option>Departmental</option>
+      <option>Faculty / School</option>
+      <option>Associations</option>
+    </select>
+  </div>
+
+  <div class="form-group fade-in" style="animation-delay:.08s;">
+    <label>Status</label>
+    <select class="no-icon" id="el-status">
+      <option value="draft">Draft (not visible to students)</option>
+      <option value="upcoming">Upcoming</option>
+      <option value="active">Active (Live)</option>
+      <option value="closed">Closed</option>
+    </select>
+  </div>
+
+  <div class="form-group fade-in" style="animation-delay:.10s;">
+    <label>Start Date &amp; Time</label>
+    <div class="date-row">
+      <input type="date" id="el-start-date">
+      <input type="time" id="el-start-time" value="08:00">
+    </div>
+  </div>
+
+  <div class="form-group fade-in" style="animation-delay:.12s;">
+    <label>End Date &amp; Time</label>
+    <div class="date-row">
+      <input type="date" id="el-end-date">
+      <input type="time" id="el-end-time" value="18:00">
+    </div>
+  </div>
+
+  <hr class="section-sep">
+
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;" class="fade-in" style="animation-delay:.14s;">
+    <div style="font-size:17px;font-weight:700;">Positions &amp; Candidates <span class="pos-count" id="pos-count">1</span></div>
+  </div>
+
+  <div id="positions-container" class="fade-in" style="animation-delay:.15s;"></div>
+
+  <button class="add-position-btn" onclick="addPosition()">+ Add New Position Block</button>
+
+  <button class="btn btn-primary fade-in" style="animation-delay:.2s;" onclick="saveElection()">
+    💾 Create Election &amp; Save All
+  </button>
+</main>
+
+<nav class="bottom-nav">
+  <a href="./admin-dashboard.html" class="bnav-item"><span class="bnav-icon">⊞</span>Dashboard</a>
+  <button class="bnav-item" onclick="toast('Settings')"><span class="bnav-icon">⚙️</span>Settings</button>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  if (!isAdmin()) window.location.href = './admin-login.html';
+
+  // ─── Check for edit mode ──────────────────────
+  var editId       = new URLSearchParams(location.search).get('id');
+  var editElection = editId ? getElectionById(editId) : null;
+
+  if (editElection) {
+    document.getElementById('page-title').textContent = 'Edit Election';
+    document.getElementById('el-title').value       = editElection.title;
+    document.getElementById('el-short').value       = editElection.shortName || '';
+    document.getElementById('el-category').value   = editElection.category;
+    document.getElementById('el-status').value     = editElection.status;
+    document.getElementById('el-start-date').value = editElection.startDate;
+    document.getElementById('el-start-time').value = editElection.startTime;
+    document.getElementById('el-end-date').value   = editElection.endDate;
+    document.getElementById('el-end-time').value   = editElection.endTime;
+  }
+
+  // ─── Candidate entry HTML ─────────────────────
+  function candidateEntryHTML(c) {
+    c = c || {};
+    return '<div class="candidate-entry">' +
+      '<button class="candidate-entry-close" onclick="this.closest(\'.candidate-entry\').remove();updateCount();">✕</button>' +
+      '<div class="upload-box" onclick="toast(\'File upload available in full deployment\')">📎 Upload picture</div>' +
+      '<input type="text" class="no-icon cand-name" placeholder="Candidate Name" style="margin-bottom:10px;" value="' + (c.name || '') + '">' +
+      '<div class="candidate-entry-row">' +
+        '<input type="text" class="no-icon cand-index" placeholder="Index Number" value="' + ((c.info && c.info.index) || '') + '">' +
+        '<input type="text" class="no-icon cand-score" placeholder="Vetting Score" value="' + ((c.info && c.info.score) || '') + '">' +
+      '</div>' +
+      '<textarea class="no-icon cand-manifesto" placeholder="Manifesto Summary" rows="3">' + ((c.info && c.info.body) || '') + '</textarea>' +
+    '</div>';
+  }
+
+  // ─── Position block HTML ──────────────────────
+  function positionBlockHTML(pos) {
+    pos = pos || {};
+    var candsHtml = '';
+    if (pos.candidates && pos.candidates.length > 0) {
+      pos.candidates.forEach(function(c) { candsHtml += candidateEntryHTML(c); });
+    } else {
+      candsHtml = candidateEntryHTML();
+    }
+    return '<div class="position-block">' +
+      '<div class="position-block-header">' +
+        '<input type="text" class="no-icon position-input" placeholder="Position title (e.g. President)" value="' + (pos.title || '') + '">' +
+        '<button class="del-pos-btn" onclick="this.closest(\'.position-block\').remove();updateCount();" title="Remove position">🗑️</button>' +
+      '</div>' +
+      '<div style="font-size:13px;font-weight:600;color:var(--text-muted);margin-bottom:10px;">Candidates</div>' +
+      '<div class="candidates-container">' + candsHtml + '</div>' +
+      '<button class="add-candidate-btn" onclick="addCandidate(this)">➕ Add Candidate</button>' +
+    '</div>';
+  }
+
+  function addPosition() {
+    var container = document.getElementById('positions-container');
+    var div = document.createElement('div');
+    div.innerHTML = positionBlockHTML();
+    container.appendChild(div.firstElementChild);
+    updateCount();
+    container.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function addCandidate(btn) {
+    var container = btn.previousElementSibling;
+    var div = document.createElement('div');
+    div.innerHTML = candidateEntryHTML();
+    container.appendChild(div.firstElementChild);
+  }
+
+  function updateCount() {
+    document.getElementById('pos-count').textContent = document.querySelectorAll('.position-block').length;
+  }
+
+  function collectPositions() {
+    var positions = [];
+    document.querySelectorAll('.position-block').forEach(function(block) {
+      var title = block.querySelector('.position-input').value.trim();
+      if (!title) return;
+      var candidates = [];
+      block.querySelectorAll('.candidate-entry').forEach(function(entry) {
+        var name  = entry.querySelector('.cand-name').value.trim();
+        var score = entry.querySelector('.cand-score').value.trim();
+        var body  = entry.querySelector('.cand-manifesto').value.trim();
+        if (name) {
+          candidates.push({ name: name, emoji: '👤', info: { role: title + ' Candidate', score: score || 'N/A', manifesto: name + '\'s Manifesto', body: body || 'Manifesto not provided.', policies: [] } });
+        }
+      });
+      if (candidates.length > 0) positions.push({ title: title, candidates: candidates });
+    });
+    return positions;
+  }
+
+  function saveElection() {
+    var title     = document.getElementById('el-title').value.trim();
+    var shortName = document.getElementById('el-short').value.trim() || title;
+    var category  = document.getElementById('el-category').value;
+    var status    = document.getElementById('el-status').value;
+    var startDate = document.getElementById('el-start-date').value;
+    var startTime = document.getElementById('el-start-time').value;
+    var endDate   = document.getElementById('el-end-date').value;
+    var endTime   = document.getElementById('el-end-time').value;
+
+    if (!title)     { toast('Please enter an election title', 'error'); return; }
+    if (!category)  { toast('Please select a category', 'error'); return; }
+    if (!startDate) { toast('Please set a start date', 'error'); return; }
+    if (!endDate)   { toast('Please set an end date', 'error'); return; }
+
+    var positions = collectPositions();
+    if (positions.length === 0) { toast('Add at least one position with a candidate', 'error'); return; }
+
+    var data = { title: title, shortName: shortName, category: category, status: status,
+                 startDate: startDate, startTime: startTime, endDate: endDate, endTime: endTime,
+                 positions: positions, seedVotes: [] };
+
+    if (editElection) {
+      updateElection(editId, data);
+      toast('"' + title + '" updated successfully! ✅', 'success');
+    } else {
+      createElection(data);
+      toast('"' + title + '" created with ' + positions.length + ' position(s)! 🎉', 'success');
+    }
+
+    setTimeout(function() { window.location.href = './admin-dashboard.html'; }, 900);
+  }
+
+  // ─── Init positions ───────────────────────────
+  var container = document.getElementById('positions-container');
+  if (editElection && editElection.positions.length > 0) {
+    editElection.positions.forEach(function(pos) {
+      var div = document.createElement('div');
+      div.innerHTML = positionBlockHTML(pos);
+      container.appendChild(div.firstElementChild);
+    });
+  } else {
+    var div = document.createElement('div');
+    div.innerHTML = positionBlockHTML({ title: 'President' });
+    container.appendChild(div.firstElementChild);
+  }
+  updateCount();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:15
+    container_name: ${POSTGRES_DB}
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck: # FIX 2: tell Docker what "ready" means for Postgres
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USERNAME} -d ${POSTGRES_DB}"]
+      interval: 5s      # check every 5 seconds
+      timeout: 5s       # give it 5s to respond
+      retries: 5      # after 5 failed checks, consider the container unhealthy#  
+  
+  backend:
+    build: .
+    container_name: campus_tally_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
+    depends_on:
+      db:
+        condition: service_healthy # FIX 1: wait for Postgres to be healthy before starting the backend
+
+volumes:
+  postgres_data:

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Login</title>
+  <link rel="stylesheet" href="./style/styles.css">
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="auth-screen">
+  <div class="auth-logo-area fade-in">
+     <img class="logo-img" src="images/logo.png" alt="CampusTally Logo"> 
+    <div class="auth-brand">CAMPUSTALLY</div>
+    <div class="auth-brand-sub">University Voting Platform</div>
+  </div>
+
+  <div class="auth-card fade-in" style="animation-delay:.1s;">
+    <div class="auth-card-title">Welcome Back</div>
+
+    <div class="form-group">
+      <label for="login-id">Student ID</label>
+      <div class="input-wrap">
+        <span class="icon">🪪</span>
+        <input type="text" id="login-id" placeholder="Enter your Student ID">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label for="login-pw">Password</label>
+      <div class="input-wrap">
+        <span class="icon">🔒</span>
+        <input type="password" id="login-pw" placeholder="Enter your password">
+        <button class="eye" onclick="togglePw('login-pw', this)">👁️</button>
+      </div>
+    </div>
+
+    <div class="forgot-link">
+      <a onclick="toast('Password reset link sent to your registered email!', 'success')">Forgot Password?</a>
+    </div>
+
+    <button class="btn btn-primary" onclick="doLogin()">Login →</button>
+
+    <div class="auth-divider">OR</div>
+    <div class="auth-link">New user? <a href="./pages/user/register.html">Sign Up here</a></div>
+    <div class="auth-link" style="margin-top:8px;">
+      <a href="./pages/admin/admin-login.html" style="color:var(--text-muted);font-size:12px;">Admin? Click here</a>
+    </div>
+  </div>
+</div>
+
+<script src="./script/app.js"></script>
+<script>
+  // Auto-redirect if already logged in
+  if (getCurrentUser()) window.location.href = 'pages/user/dashboard.html';
+
+  function doLogin() {
+    var id = document.getElementById('login-id').value.trim();
+    var pw = document.getElementById('login-pw').value.trim();
+    if (!id || !pw) { toast('Please fill in all fields', 'error'); return; }
+    var result = loginUser(id, pw);
+    if (!result.ok) { toast(result.error, 'error'); return; }
+    toast('Login successful! Welcome back ' + result.user.name + ' 👋', 'success');
+    setTimeout(function() { window.location.href = 'pages/user/dashboard.html'; }, 800);
+  }
+
+  document.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });
+</script>
+</body>
+</html>

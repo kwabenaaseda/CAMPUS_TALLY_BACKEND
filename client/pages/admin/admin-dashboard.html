@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Admin Dashboard</title>
+    <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>body { display:flex; flex-direction:column; min-height:100vh; }</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="admin-header fade-in">
+  <div style="display:flex;justify-content:space-between;align-items:center;">
+    <button style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;" onclick="toast('Menu coming soon')">☰</button>
+    <div style="font-family:'Playfair Display',serif;font-size:18px;font-weight:700;color:#fff;">CampusTally</div>
+    <button class="icon-btn" style="color:rgba(255,255,255,0.85);" onclick="toast('No new notifications')">🔔<span class="notif-dot"></span></button>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;margin-top:16px;">
+    <div style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;">🛡️</div>
+    <div>
+      <div class="admin-header-title">Admin Dashboard</div>
+      <div class="admin-header-sub">Manage Elections &amp; Candidates</div>
+    </div>
+  </div>
+</div>
+
+<main class="page-content" id="main-content">
+  <!-- Rendered by JS -->
+</main>
+
+<nav class="bottom-nav">
+  <a href="./admin-dashboard.html" class="bnav-item active"><span class="bnav-icon">🏠</span>Home</a>
+  <a href="../user/results.html"          class="bnav-item"><span class="bnav-icon">📊</span>Analytics</a>
+  <button                         class="bnav-item" onclick="doAdminLogout()"><span class="bnav-icon">🚪</span>Logout</button>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  if (!isAdmin()) window.location.href = './admin-login.html';
+
+  var STATUS_DOT = { active:'var(--success)', upcoming:'var(--upcoming)', closed:'var(--closed)', draft:'var(--closed)' };
+  var STATUS_LABEL = { active:'Active', upcoming:'Upcoming', closed:'Closed', draft:'Draft' };
+
+  function render() {
+    var elections   = getElections();
+    var totalVotes  = getTotalVotesCast();
+    var registered  = getRegisteredCount();
+    var activeCount = elections.filter(function(e) { return e.status === 'active'; }).length;
+
+    var html = '';
+
+    // Quick actions
+    html += '<div style="font-size:18px;font-weight:700;margin-bottom:14px;" class="fade-in">Quick Actions</div>';
+    html += '<div class="quick-actions fade-in" style="animation-delay:.05s;">';
+    html += '<a href="create-election.html" class="quick-card"><div class="quick-card-icon">🗳️</div><div class="quick-card-label">Add New Election</div></a>';
+    html += '<button class="quick-card" onclick="publishAll()"><div class="quick-card-icon" style="color:#7c3aed;">📊</div><div class="quick-card-label">Publish Results</div></button>';
+    html += '<button class="quick-card" onclick="toast(\'Voter management coming soon\')"><div class="quick-card-icon" style="color:#0891b2;">👥</div><div class="quick-card-label">Manage Voters</div></button>';
+    html += '<button class="quick-card" onclick="exportData()"><div class="quick-card-icon" style="color:#16a34a;">📑</div><div class="quick-card-label">Export Data</div></button>';
+    html += '</div>';
+
+    // Stats
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:24px;" class="fade-in" style="animation-delay:.08s;">';
+    html += '<div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:900;color:var(--primary);">' + elections.length + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Elections</div></div>';
+    html += '<div class="card" style="text-align:center;padding:16px;"><div style="font-size:20px;font-weight:900;color:var(--success);">' + (totalVotes > 999 ? (totalVotes / 1000).toFixed(1) + 'k' : totalVotes) + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Votes Cast</div></div>';
+    html += '<div class="card" style="text-align:center;padding:16px;"><div style="font-size:24px;font-weight:900;color:#3b82f6;">' + registered + '</div><div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Registered</div></div>';
+    html += '</div>';
+
+    // Elections list
+    html += '<div class="section-header-row fade-in" style="animation-delay:.1s;">';
+    html += '<div style="font-size:18px;font-weight:700;">All Elections</div>';
+    html += '<a href="create-election.html" style="font-size:13px;color:#3b82f6;font-weight:600;text-decoration:none;">+ New</a>';
+    html += '</div>';
+
+    if (elections.length === 0) {
+      html += '<div style="text-align:center;padding:40px;color:var(--text-muted);font-size:14px;">No elections yet. <a href="../user/create-election.html" style="color:var(--primary);">Create one</a>.</div>';
+    } else {
+      elections.forEach(function(el, i) {
+        var dot   = STATUS_DOT[el.status]   || 'var(--closed)';
+        var label = STATUS_LABEL[el.status] || el.status;
+        var delay = (i * 0.05) + 0.12;
+        var elVotes = 0;
+        if (el.seedVotes) el.seedVotes.forEach(function(a) { a.forEach(function(n) { elVotes += n; }); });
+
+        html += '<div class="election-admin-item fade-in" style="animation-delay:' + delay + 's;" id="item-' + el.id + '">';
+        html += '<div class="election-admin-icon" style="background:' + (el.status === 'active' ? '#fef2f2' : el.status === 'upcoming' ? '#eff6ff' : '#f5f3ff') + ';">🎓</div>';
+        html += '<div class="election-admin-info">';
+        html += '<div class="election-admin-name">' + el.title + '</div>';
+        html += '<div class="election-admin-status"><span style="color:' + dot + ';">●</span> ' + label + ' · ' + el.positions.length + ' position(s) · ' + (elVotes > 0 ? elVotes.toLocaleString() + ' seed votes' : 'No seed votes') + '</div>';
+        html += '</div>';
+        html += '<div class="election-admin-actions">';
+        html += '<a href="create-election.html?id=' + el.id + '" class="action-icon-btn edit" title="Edit">✏️</a>';
+        html += '<button class="action-icon-btn del" onclick="confirmDel(\'' + el.id + '\',\'' + el.title.replace(/'/g,'\\\'') + '\')" title="Delete">🗑️</button>';
+        html += '</div></div>';
+      });
+    }
+
+    document.getElementById('main-content').innerHTML = html;
+  }
+
+  function confirmDel(id, title) {
+    if (confirm('Delete "' + title + '"? This cannot be undone.')) {
+      deleteElection(id);
+      toast('"' + title + '" deleted', 'error');
+      render();
+    }
+  }
+
+  function publishAll() {
+    toast('All results published to students ✅', 'success');
+    logActivity('admin', { type: 'publish', timestamp: Date.now() });
+  }
+
+  function exportData() {
+    var data = {
+      elections: getElections(),
+      votes:     getAllVotes(),
+      users:     Object.keys(getUsers()).map(function(id) {
+        var u = getUsers()[id];
+        return { id: u.id, name: u.name, course: u.course, votingStatus: u.votingStatus };
+      }),
+      exportedAt: new Date().toISOString()
+    };
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var a    = document.createElement('a');
+    a.href   = URL.createObjectURL(blob);
+    a.download = 'campustally-export-' + Date.now() + '.json';
+    a.click();
+    toast('Data exported as JSON ✅', 'success');
+  }
+
+  function doAdminLogout() {
+    doAdminLogout_fn();
+  }
+
+  function adminLogout(){
+     DB.set('ct_admin_session',"0")
+  }
+
+
+  // rename to avoid collision
+  function doAdminLogout_fn() {
+    adminLogout()
+    window.location.href = './admin-login.html';
+  }
+
+  render();
+</script>
+</body>
+</html>

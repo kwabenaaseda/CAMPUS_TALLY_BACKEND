@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Vote Confirmed</title>
+   <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; background:#faf7f5; }
+    .conf-topbar { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; background:var(--white); border-bottom:1px solid var(--border); }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="conf-topbar">
+  <a href="./dashboard.html" style="font-size:20px;color:var(--text-muted);text-decoration:none;">✕</a>
+  <div style="font-weight:700;font-size:16px;">Confirmation</div>
+  <div style="width:24px;"></div>
+</div>
+
+<div class="confirmation-body fade-in">
+  <div class="check-circle">✔️</div>
+  <div class="confirmation-title">Vote Successfully<br>Cast!</div>
+
+  <div class="confirmation-detail">
+    <div class="detail-row">
+      <div class="detail-label">Election</div>
+      <div class="detail-value" id="conf-election">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Reference ID</div>
+      <div class="detail-value" id="conf-ref">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Timestamp</div>
+      <div class="detail-value" id="conf-time">—</div>
+    </div>
+    <div class="detail-row">
+      <div class="detail-label">Voter</div>
+      <div class="detail-value" id="conf-voter">—</div>
+    </div>
+  </div>
+
+  <a href="./dashboard.html" class="btn btn-primary" style="margin-top:28px;max-width:360px;width:100%;">Back to Dashboard</a>
+  <a href="./results.html"   style="display:block;text-align:center;margin-top:14px;font-size:14px;color:var(--primary);font-weight:600;text-decoration:none;">View Live Results →</a>
+</div>
+
+<script src="../../script/app.js"></script>
+<script>
+  var user = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  var ref      = sessionStorage.getItem('ct_conf_ref')  || ('CT-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000)));
+  var ts       = parseInt(sessionStorage.getItem('ct_conf_time') || Date.now());
+  var elName   = sessionStorage.getItem('ct_conf_name') || 'Election';
+
+  document.getElementById('conf-election').textContent = elName;
+  document.getElementById('conf-ref').textContent      = ref;
+  document.getElementById('conf-time').textContent     = fmtTime(ts);
+  document.getElementById('conf-voter').textContent    = user.name + ' (' + user.id + ')';
+
+  // Log the overall vote activity (election-level)
+  logActivity(user.id, { type: 'voted', electionName: elName, ref: ref, timestamp: ts });
+
+  // Clear temp session data
+  sessionStorage.removeItem('ct_conf_ref');
+  sessionStorage.removeItem('ct_conf_time');
+  sessionStorage.removeItem('ct_conf_name');
+</script>
+</body>
+</html>

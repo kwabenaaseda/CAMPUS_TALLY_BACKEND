@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Vote</title>
+  <link rel="stylesheet" href="../../style/styles.css">
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; background:#f0f2f5; }
+    .skip-btn { width:100%; padding:14px; background:none; border:1.5px solid var(--border); border-radius:var(--radius-sm); color:var(--text-muted); font-size:14px; font-weight:600; cursor:pointer; font-family:'DM Sans',sans-serif; margin-top:10px; }
+    .skip-btn:hover { background:#f9fafb; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<!-- CANDIDATE INFO MODAL -->
+<div class="modal-overlay hidden" id="candidate-modal">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modal-content"></div>
+    <button class="btn btn-primary" style="margin-top:16px;" onclick="closeModal()">← Back to Voting</button>
+  </div>
+</div>
+
+<div class="vote-header">
+  <button class="back-btn" onclick="prevPosition()">←</button>
+  <div style="text-align:center;flex:1;">
+    <div class="vote-header-title" id="position-title">Loading…</div>
+  </div>
+  <div class="vote-header-pos" id="position-num">—</div>
+</div>
+<div class="vote-progress-bar">
+  <div class="vote-progress-fill" id="vote-progress" style="width:0%"></div>
+</div>
+
+<main style="flex:1;padding:20px;padding-bottom:30px;max-width:600px;margin:0 auto;width:100%;">
+  <p id="vote-instruction" style="font-size:14px;color:var(--text-muted);margin-bottom:20px;"></p>
+  <div id="candidates-list"></div>
+  <button class="skip-btn" onclick="skipPosition()">Skip this position</button>
+</main>
+
+<script src="../../script/app.js"></script>
+<script>
+  // ─── Init ─────────────────────────────────────
+  var user     = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  var params   = new URLSearchParams(location.search);
+  var elId     = params.get('election') || 'src_2024';
+  var election = getElectionById(elId);
+  if (!election || election.status === 'upcoming' || election.status === 'draft') {
+    window.location.href = './elections.html';
+  }
+
+  var posIndex = parseInt(sessionStorage.getItem('ct_pos_' + elId) || '0');
+
+  // ─── Render ───────────────────────────────────
+  function render() {
+    var pos   = election.positions[posIndex];
+    var total = election.positions.length;
+
+    document.getElementById('position-title').textContent      = pos.title;
+    document.getElementById('position-num').textContent        = 'Position ' + (posIndex + 1) + ' of ' + total;
+    document.getElementById('vote-instruction').textContent    = 'Select one candidate for the position of ' + pos.title + '.';
+    document.getElementById('vote-progress').style.width       = ((posIndex + 1) / total * 100) + '%';
+
+    var chosen = getVoteForPosition(user.id, elId, posIndex);
+    var list   = document.getElementById('candidates-list');
+    list.innerHTML = '';
+
+    pos.candidates.forEach(function(c, i) {
+      var isSelected = chosen === i;
+      var card = document.createElement('div');
+      card.className = 'candidate-card' + (isSelected ? ' selected' : '') + ' fade-in';
+      card.style.animationDelay = (i * 0.06) + 's';
+      card.innerHTML =
+        '<div class="candidate-avatar">' + (c.emoji || '👤') + '</div>' +
+        '<div style="flex:1;">' +
+          '<div class="candidate-name">' + c.name + '</div>' +
+          '<button class="candidate-view" onclick="showInfo(' + i + ')">ℹ️ View Info</button>' +
+        '</div>' +
+        '<button class="btn-vote" onclick="vote(' + i + ')">' + (isSelected ? '✔ Voted' : 'Vote') + '</button>';
+      list.appendChild(card);
+    });
+  }
+
+  function vote(i) {
+    castVote(user.id, elId, posIndex, i);
+    var cName = election.positions[posIndex].candidates[i].name;
+    toast('Voted for ' + cName + '! 🗳️', 'success');
+    setTimeout(advance, 700);
+  }
+
+  function skipPosition() { advance(); }
+
+  function advance() {
+    if (posIndex < election.positions.length - 1) {
+      posIndex++;
+      sessionStorage.setItem('ct_pos_' + elId, posIndex);
+      render();
+      window.scrollTo(0, 0);
+    } else {
+      sessionStorage.removeItem('ct_pos_' + elId);
+      // Save confirmation details
+      var refId = 'CT-' + new Date().getFullYear() + '-' + String(Math.floor(1000 + Math.random() * 9000));
+      sessionStorage.setItem('ct_conf_ref',   refId);
+      sessionStorage.setItem('ct_conf_time',  Date.now().toString());
+      sessionStorage.setItem('ct_conf_name',  election.shortName || election.title);
+      window.location.href = './confirmation.html';
+    }
+  }
+
+  function prevPosition() {
+    if (posIndex > 0) {
+      posIndex--;
+      sessionStorage.setItem('ct_pos_' + elId, posIndex);
+      render();
+      window.scrollTo(0, 0);
+    } else {
+      window.location.href = './elections.html';
+    }
+  }
+
+  // ─── Candidate Info Modal ─────────────────────
+  function showInfo(i) {
+    var c    = election.positions[posIndex].candidates[i];
+    var info = c.info;
+    var html =
+      '<div class="candidate-info-card">' +
+        '<div style="font-size:48px;margin-bottom:10px;">👤</div>' +
+        '<div class="candidate-info-name">' + c.name + '</div>' +
+        '<div class="candidate-info-label">' + info.role + '</div>' +
+      '</div>' +
+      '<div style="display:flex;gap:12px;margin-bottom:14px;">' +
+        '<div class="candidate-info-card" style="flex:1;padding:14px;">' +
+          '<div class="candidate-info-label">Position</div>' +
+          '<div style="font-size:14px;font-weight:700;margin-top:4px;">' + election.positions[posIndex].title + '</div>' +
+        '</div>' +
+        '<div class="candidate-info-card" style="flex:1;padding:14px;">' +
+          '<div class="candidate-info-label" style="color:var(--primary);">Vetting Score</div>' +
+          '<div style="font-size:20px;font-weight:900;color:var(--primary);margin-top:4px;">' + info.score + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="result-card">' +
+        '<div class="manifesto-title">' + info.manifesto + '</div>' +
+        '<div class="manifesto-body">' + info.body + '</div>' +
+        '<div style="margin-top:16px;">' +
+          info.policies.map(function(p, idx) {
+            return '<div style="margin-bottom:12px;">' +
+              '<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--primary);">Key Policy Area ' + (idx + 1) + '</div>' +
+              '<div style="font-size:14px;color:var(--text-muted);margin-top:4px;">' + p + '</div>' +
+            '</div>';
+          }).join('') +
+        '</div>' +
+      '</div>';
+    document.getElementById('modal-content').innerHTML = html;
+    document.getElementById('candidate-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('candidate-modal').classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  document.getElementById('candidate-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  render();
+</script>
+</body>
+</html>

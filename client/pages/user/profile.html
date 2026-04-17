@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Profile</title>
+  <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .profile-topbar { display:flex; justify-content:space-between; align-items:center; width:100%; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<div class="profile-header fade-in" id="profile-header">
+  <!-- Rendered by JS -->
+</div>
+
+<main class="page-content fade-in" style="animation-delay:.1s;" id="main-content">
+  <!-- Rendered by JS -->
+</main>
+
+<nav class="bottom-nav">
+  <a href="./dashboard.html" class="bnav-item active"><span class="bnav-icon">⊞</span>Dashboard</a>
+  <a href="./elections.html" class="bnav-item"><span class="bnav-icon">🗳️</span>Elections</a>
+  <a href="./results.html"   class="bnav-item"><span class="bnav-icon">📊</span>Results</a>
+  <a href="./profile.html"   class="bnav-item"><span class="bnav-icon">👤</span>Profile</a>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  var user = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  function render() {
+    // ─── Profile Header ────────────────────────
+    document.getElementById('profile-header').innerHTML =
+      '<div class="profile-topbar">' +
+        '<div style="font-family:\'Playfair Display\',serif;font-size:18px;font-weight:700;">Profile</div>' +
+        '<button class="icon-btn" style="color:rgba(255,255,255,0.8);" onclick="toast(\'Settings coming soon\')">⚙️</button>' +
+      '</div>' +
+      '<div class="profile-avatar">👤</div>' +
+      '<div class="profile-name">' + user.name + '</div>' +
+      '<div class="profile-id-text">ID: ' + user.id + '</div>';
+
+    // ─── Fields ────────────────────────────────
+    var fieldsHtml =
+      '<div class="profile-field"><div class="profile-field-label">Course</div><div class="profile-field-value">' + (user.course || '—') + '</div></div>' +
+      '<div class="profile-field"><div class="profile-field-label">Index Number</div><div class="profile-field-value">' + (user.index || '—') + '</div></div>' +
+      '<div class="profile-field"><div class="profile-field-label">Level</div><div class="profile-field-value">' + (user.level || '400') + '</div></div>' +
+      '<div class="profile-field" style="text-align:center;">' +
+        '<div class="profile-field-label">Voting Status</div>' +
+        '<div style="font-size:16px;font-weight:700;margin-top:6px;">' + (user.votingStatus || 'Verified') + '</div>' +
+        '<div style="font-size:24px;margin-top:6px;">✅</div>' +
+      '</div>';
+
+    // ─── Voting Summary ────────────────────────
+    var elections  = getElections();
+    var votedIn    = elections.filter(function(e) { return hasVotedInElection(user.id, e.id); });
+    var allVotes   = getAllVotes()[user.id] || {};
+    var totalCast  = Object.keys(allVotes).length;
+
+    fieldsHtml +=
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">' +
+        '<div class="card" style="text-align:center;padding:16px;">' +
+          '<div style="font-size:28px;font-weight:900;color:var(--primary);">' + votedIn.length + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Elections Voted</div>' +
+        '</div>' +
+        '<div class="card" style="text-align:center;padding:16px;">' +
+          '<div style="font-size:28px;font-weight:900;color:var(--success);">' + totalCast + '</div>' +
+          '<div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Total Votes Cast</div>' +
+        '</div>' +
+      '</div>';
+
+    // ─── Activity ──────────────────────────────
+    fieldsHtml += '<div style="font-size:18px;font-weight:700;margin:20px 0 12px;">Recent Activity</div>';
+
+    var activity = getActivity(user.id);
+    if (activity.length === 0) {
+      fieldsHtml += '<div style="text-align:center;padding:30px;color:var(--text-muted);font-size:14px;">No activity yet. Cast your first vote! 🗳️</div>';
+    } else {
+      activity.slice(0, 10).forEach(function(item) {
+        var label, icon;
+        if (item.type === 'voted') {
+          label = 'Voted in ' + (item.electionName || 'Election');
+          icon  = '🗳️';
+        } else if (item.type === 'vote') {
+          var el  = getElectionById(item.electionId);
+          var pos = el ? (el.positions[item.positionIndex] || {}) : {};
+          var cand = pos.candidates ? pos.candidates[item.candidateIndex] : null;
+          label = 'Voted for ' + (cand ? cand.name : 'a candidate') + (pos.title ? ' (' + pos.title + ')' : '');
+          icon  = '✅';
+        } else {
+          label = 'Activity';
+          icon  = '📋';
+        }
+        fieldsHtml +=
+          '<div class="activity-item">' +
+            '<div class="activity-icon">' + icon + '</div>' +
+            '<div>' +
+              '<div class="activity-title">' + label + '</div>' +
+              '<div class="activity-time">' + fmtTime(item.timestamp) + '</div>' +
+            '</div>' +
+          '</div>';
+      });
+    }
+
+    fieldsHtml += '<button class="btn btn-primary" style="margin-top:20px;" onclick="doLogout()">↩ Logout</button>';
+
+    document.getElementById('main-content').innerHTML = fieldsHtml;
+  }
+
+  function doLogout() {
+    logoutUser();
+    toast('Logged out successfully');
+    setTimeout(function() { window.location.href = '../../index.html'; }, 600);
+  }
+
+  render();
+</script>
+</body>
+</html>

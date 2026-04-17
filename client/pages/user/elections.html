@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusTally – Elections</title>
+    <link rel="stylesheet" href="../../style/styles.css">
+
+  <style>body { display:flex; flex-direction:column; min-height:100vh; }</style>
+</head>
+<body>
+<div id="toast-container"></div>
+
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a href="dashboard.html" class="back-btn">←</a>
+    <div style="margin-left:10px;">
+      <div class="brand-name" style="font-size:15px;">CampusTally Election</div>
+    </div>
+  </div>
+</nav>
+
+<main class="page-content" id="main-content">
+  <!-- Rendered by JS -->
+</main>
+
+<nav class="bottom-nav">
+  <a href="./dashboard.html" class="bnav-item active"><span class="bnav-icon">⊞</span>Dashboard</a>
+  <a href="./elections.html" class="bnav-item"><span class="bnav-icon">🗳️</span>Elections</a>
+  <a href="./results.html"   class="bnav-item"><span class="bnav-icon">📊</span>Results</a>
+  <a href="./profile.html"   class="bnav-item"><span class="bnav-icon">👤</span>Profile</a>
+</nav>
+
+<script src="../../script/app.js"></script>
+<script>
+  var user = getCurrentUser();
+  if (!user) window.location.href = '../../index.html';
+
+  var STATUS_BADGE = {
+    active:   '<span class="badge badge-live">LIVE</span>',
+    upcoming: '<span class="badge badge-upcoming">UPCOMING</span>',
+    closed:   '<span class="badge badge-closed">CLOSED</span>',
+    draft:    '<span class="badge badge-closed">DRAFT</span>'
+  };
+
+  function render() {
+    var elections = getElections().filter(function(e) { return e.status !== 'draft'; });
+    var html = '<div class="page-header fade-in"><div class="page-title">Active &amp; Upcoming Elections</div></div>';
+
+    elections.forEach(function(el, i) {
+      var voted   = hasVotedInElection(user.id, el.id);
+      var delay   = (i * 0.07) + 0.04;
+      var posCount = el.positions.length;
+
+      html += '<div class="elections-page-item fade-in" style="animation-delay:' + delay + 's;">';
+      html += '<div class="elections-page-item-header">';
+      html += '<div class="elections-page-item-name">' + el.shortName + '</div>';
+      html += (STATUS_BADGE[el.status] || '') + '</div>';
+      html += '<div class="elections-page-item-positions">👤 ' + posCount + ' Position' + (posCount !== 1 ? 's' : '') + '</div>';
+
+      if (el.status === 'active') {
+        html += '<a href="voting.html?election=' + el.id + '" class="btn btn-primary">';
+        html += voted ? '🔁 Vote Again' : 'Start Voting';
+        html += '</a>';
+        if (voted) {
+          html += '<div style="font-size:12px;color:var(--success);text-align:center;margin-top:8px;font-weight:600;">✅ You have voted in this election</div>';
+        }
+      } else if (el.status === 'upcoming') {
+        html += '<button class="btn btn-ghost" disabled style="cursor:not-allowed;opacity:.6;">Pending</button>';
+      } else if (el.status === 'closed') {
+        html += '<div style="font-size:13px;color:var(--success);font-weight:600;margin-bottom:12px;">✅ Results Available</div>';
+        html += '<a href="results.html" class="btn btn-outline">View Results</a>';
+      }
+      html += '</div>';
+    });
+
+    document.getElementById('main-content').innerHTML = html;
+  }
+
+  render();
+</script>
+</body>
+</html>
