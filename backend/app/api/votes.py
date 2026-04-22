@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.core.deps import get_current_user
 import app
-from backend.app.db.deps import get_db
+from app.db.deps import get_db
 import app.services.vote as vote_service
 import app.schemas.vote as vote
 
