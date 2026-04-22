@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Dashboard</title>
    <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
   <style>body { display:flex; flex-direction:column; min-height:100vh; }</style>
 </head>
@@ -36,13 +37,14 @@
 </nav>
 
 <script src="../../script/app.js"></script>
-<script>
+<script >
   // Guard
+
   var user = getCurrentUser();
   if (!user) window.location.href = '../../index.html';
 
-  function render() {
-    var elections = getElections();
+ async function render() {
+    var elections = await getElections();
     var active    = elections.filter(function(e) { return e.status === 'active'; });
     var upcoming  = elections.filter(function(e) { return e.status === 'upcoming'; });
     var html      = '';

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Login</title>
   <link rel="stylesheet" href="./style/styles.css">
+  <link rel="icon" href="./images/logo.png" type="image/png">
 </head>
 <body>
 <div id="toast-container"></div>
@@ -51,18 +52,21 @@
 </div>
 
 <script src="./script/app.js"></script>
-<script>
+<script >
   // Auto-redirect if already logged in
-  if (getCurrentUser()) window.location.href = 'pages/user/dashboard.html';
+  var user = getCurrentUser()
+  if (user) window.location.href = 'pages/user/dashboard.html';
 
-  function doLogin() {
+  async function doLogin() {
     var id = document.getElementById('login-id').value.trim();
     var pw = document.getElementById('login-pw').value.trim();
     if (!id || !pw) { toast('Please fill in all fields', 'error'); return; }
-    var result = loginUser(id, pw);
+    var result = await loginUser(id, pw);
     if (!result.ok) { toast(result.error, 'error'); return; }
     toast('Login successful! Welcome back ' + result.user.name + ' 👋', 'success');
-    setTimeout(function() { window.location.href = 'pages/user/dashboard.html'; }, 800);
+    setTimeout(function() { 
+      window.location.href = 'pages/user/dashboard.html';
+     }, 800);
   }
 
   document.addEventListener('keydown', function(e) { if (e.key === 'Enter') doLogin(); });

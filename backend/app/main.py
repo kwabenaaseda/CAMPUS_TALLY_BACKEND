@@ -8,7 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 from app.db.database import engine, Base, SessionLocal
-from app.models import Admin, Election
+import app.models  # Import all models to register them with SQLAlchemy
+from app.models import Election, Admin, Position, Candidate  # Explicit imports for clarity
 from app.core.security import get_password_hash
 from app.core.config import settings
 
@@ -64,10 +65,11 @@ def seed_database():
 
 def _seed_admin(db: Session):
     """Create the root admin from .env credentials if it doesn't exist."""
-    existing = db.query(Admin.Admin).filter(Admin.Admin.fullname == settings.ADMIN_USERNAME).first()
+    existing = db.query(Admin).filter(Admin.fullname == settings.ADMIN_USERNAME).first()
     if not existing:
-        root = Admin.Admin(
+        root = Admin(
             fullname    = settings.ADMIN_USERNAME,
+            id_code     = settings.ADMIN_ID_CODE,
             hashed_password = get_password_hash(settings.ADMIN_PASSWORD),
             is_root       = True
         )
@@ -77,11 +79,9 @@ def _seed_admin(db: Session):
 
 
 def _seed_elections(db: Session):
-    """Seed default elections (same data as the frontend's defaultElections())."""
-    if db.query(Election.Election).count() > 0:
-        return  # Already seeded — don't overwrite
+    if db.query(Election).count() > 0:
+        return
 
-    import time, json
     from app.models.Election import Election as ElModel
 
     elections_data = _default_elections()
@@ -93,16 +93,52 @@ def _seed_elections(db: Session):
             category   = data["category"],
             status     = data["status"],
             start_date = data.get("startDate"),
-            start_time = data.get("startTime"),
             end_date   = data.get("endDate"),
-            end_time   = data.get("endTime"),
         )
-        el.positions  = data.get("positions", [])
-        el.seed_votes = data.get("seedVotes", [])
+
+        raw_positions = data.get("positions", [])
+        position_objects = []
+
+        # Loop through Positions
+        for p_idx, p_data in enumerate(raw_positions):
+            # 1. Extract candidates before creating the Position object
+            candidates_raw = p_data.pop("candidates", [])
+            
+            # 2. Create the Position object first so we have its data
+            pos_obj = Position(
+                **p_data,
+                position_index = p_idx, # Ensure your Position model has this!
+                election_id    = el.id
+            )
+            
+            # 3. Create Candidate objects for this position
+            candidate_objs = []
+            for c_idx, c_data in enumerate(candidates_raw):
+                info = c_data.pop("info", {})
+                
+                candidate = Candidate(
+                    name            = c_data.get("name"),
+                    emoji           = c_data.get("emoji"),
+                    candidate_index = c_idx,
+                    election_id     = el.id,
+                    position_index  = p_idx, # Match parent position index
+                    role            = info.get("role"),
+                    score           = info.get("score"),
+                    manifesto_title = info.get("manifesto"),
+                    manifesto_body  = info.get("body"),
+                    policies        = info.get("policies", [])
+                )
+                candidate_objs.append(candidate)
+            
+            # 4. Attach candidates to the position
+            pos_obj.candidates = candidate_objs
+            position_objects.append(pos_obj)
+            
+        el.positions = position_objects
         db.add(el)
+    
     db.commit()
     print(f"[seed] {len(elections_data)} default elections seeded.")
-
 
 # ─── Health Check ─────────────────────────────────────────────────────────────
 @app.get("/")

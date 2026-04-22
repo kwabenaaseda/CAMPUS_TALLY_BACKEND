@@ -1,141 +1,109 @@
-from pydantic import BaseModel
+# app/schemas/user.py
+# ─── User / Auth Schemas ──────────────────────────────────────────────────────
+# IMPORTANT: field names here must match what the frontend JavaScript sends.
+#
+# register.html → api_handler.registerUser({ name, id, index, course, password })
+# index.html    → api_handler.loginUser(studentId, password)
+#                   → POST body: { studentId, password }
+# admin-login   → api_handler.adminLogin(adminId, password)
+#                   → POST body: { adminId, password }
+#
+# The DB models use internal names (fullname, student_id, index_number, department).
+# Services map from schema field names → DB field names.
+# ──────────────────────────────────────────────────────────────────────────────
+
+import re
+from pydantic import BaseModel, field_validator
 from typing import Optional
 
-# Signup
-# app/schemas/user.py
 
-from pydantic import BaseModel, field_validator
-import re
+# ── Signup ────────────────────────────────────────────────────────────────────
 
 class UserCreateRequest(BaseModel):
-    fullname: str
-    student_id: str
-    index_number: str
-    department: str
+    name:     str    # → Voter.fullname
+    id:       str    # → Voter.student_id  (the student types their ID)
+    index:    str    # → Voter.index_number
+    course:   str    # → Voter.department
     password: str
 
-    @field_validator("fullname")
-    def validate_fullname(cls, v):
+    @field_validator("name")
+    def validate_name(cls, v):
         if not re.match(r"^[a-zA-Z\s]+$", v):
-            raise ValueError("Fullname should only contain letters and spaces")
+            raise ValueError("Name should only contain letters and spaces")
         return v
 
-    @field_validator("student_id", "index_number")
+    @field_validator("id", "index")
     def validate_ids(cls, v):
         if not re.match(r"^[a-zA-Z0-9]+$", v):
             raise ValueError("Must contain only letters and numbers")
         return v
 
-    @field_validator("department")
-    def validate_department(cls, v):
-        if not re.match(r"^[a-zA-Z\s]+$", v):
-            raise ValueError("Department invalid")
-        return v
-
     @field_validator("password")
     def validate_password(cls, v):
         pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
         if not re.match(pattern, v):
-            raise ValueError("Weak password")
+            raise ValueError("Password must be 8+ chars with upper, lower, digit and special char")
         return v
 
-class UserCreateResponse(BaseModel):
-    token: str
-    success: bool
-    message: str
-    data: Optional[dict]
-    
 
-class UserCreateError(BaseModel):
-    detail: str
-    success: bool
+# ── Login ─────────────────────────────────────────────────────────────────────
 
-
-# Login
 class UserLoginRequest(BaseModel):
-    student_id: str
+    studentId: str   # matches api_handler: { studentId, password }
+    password:  str
+
+
+# ── Admin login ───────────────────────────────────────────────────────────────
+
+class AdminLoginRequest(BaseModel):
+    adminId:  str    # matches api_handler: { adminId, password }
     password: str
 
-    @field_validator("student_id")
-    def validate_student_id(cls, v):
-        if not re.match(r"^[a-zA-Z0-9]+$", v):
-            raise ValueError("Student ID should only contain letters and numbers")
-        return v
-    
-    @field_validator("password")
-    def validate_password(cls, v):
-        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
-        if not re.match(pattern, v):
-            raise ValueError("Weak password")
-        return v
 
-class UserLoginResponse(BaseModel):
+# ── Shared user dict (embedded in auth responses) ─────────────────────────────
+# Matches the frontend's UserObject shape exactly.
+# profile.html reads: user.id, user.name, user.course, user.index,
+#                     user.level, user.votingStatus, user.createdAt
+
+class UserOut(BaseModel):
+    id:            str    # student_id
+    name:          str    # fullname
+    index:         str    # index_number
+    course:        str    # department
+    level:         str    # "400"
+    votingStatus:  str    # "Verified"
+    createdAt:     int    # Unix ms
+
+    class Config:
+        from_attributes = True
+
+
+# ── Auth responses ────────────────────────────────────────────────────────────
+
+class AuthResponse(BaseModel):
     token: str
     success: bool
     message: str
-    data: Optional[dict]
+    user: dict
 
-class UserLoginError(BaseModel):
-    detail: str
-    success: bool
 
-# Update user
-class UserUpdate(BaseModel):
-    token: str
-    profile_picture: Optional[str]
-    fullname:Optional[str]
-    student_id:Optional[str]
-    index_number:Optional[str]
-    department:Optional[str]
-    level:Optional[int]
-
-class UpdatePassword(BaseModel):
-    password: str
+class AdminAuthResponse(BaseModel):
     token: str
 
 
+# ── Admin management ──────────────────────────────────────────────────────────
 
-# Get User Data 
-class GetUserDataResponse(BaseModel):
-    token: str
-    profile_picture: Optional[str]
-    fullname:str
-    student_id:str
-    index_number:str
-    department:str
-    level:Optional[int]
-
-
-
-
-
-
-
-
-# Admin Login
-class AdminLogin(BaseModel):
-    id_code: str
+class AdminCreateRequest(BaseModel):
+    adminId:  str
+    fullname: str
     password: str
 
-    @field_validator("id_code")
-    def validate_id_code(cls, v):
+    @field_validator("adminId")
+    def validate_id(cls, v):
         if not re.match(r"^[a-zA-Z0-9]+$", v):
-            raise ValueError("adminId should only contain letters and numbers")
-        return v
-    
-    @field_validator("password")
-    def validate_password(cls, v):
-        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$"
-        if not re.match(pattern, v):
-            raise ValueError("Weak password")
+            raise ValueError("Admin ID must be alphanumeric")
         return v
 
 
-class AdminLoginResponse(BaseModel):
-    token: str
-    success: bool
-    message: str
-    data: Optional[dict]    
-
-class AdminLoginResponseError(BaseModel):
-    detail: str
+class AdminRemoveRequest(BaseModel):
+    adminId: str

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Live Results</title>
   <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
   <style>
     body { display:flex; flex-direction:column; min-height:100vh; }
@@ -35,7 +36,8 @@
 </nav>
 
 <script src="../../script/app.js"></script>
-<script>
+<script >
+   
   var user = getCurrentUser();
   if (!user) window.location.href = '../../index.html';
 
@@ -68,9 +70,10 @@
     return html;
   }
 
-  function render() {
-    var elections    = getElections().filter(function(e) { return e.status !== 'draft' && e.status !== 'upcoming'; });
-    var totalVotes   = getTotalVotesCast();
+  async function render() {
+    var elections    = await getElections();
+    elections = elections.filter(function(e) { return e.status !== 'draft' && e.status !== 'upcoming'; });
+    var totalVotes   = await getTotalVotesCast();
     var html         = '';
 
     // Total votes card

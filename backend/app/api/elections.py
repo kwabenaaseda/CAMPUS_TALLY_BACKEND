@@ -1,5 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
 
+import app.core.deps as MW
+import app.services.election as election_service
+import app.schemas.election as EL
+from app.db.deps import get_db
 
 router = APIRouter(prefix="/api/elections", tags=["election"])
 
@@ -12,9 +17,13 @@ def create_election():
 
 # Get all elections Endpoint
 @router.get("/all")
-def get_all_elections():
+async def get_all_elections(
+    db: Session = Depends(get_db),
+):
     # Implement logic to get all elections here
-    return {"message": "List of all elections"}
+   
+    Elections = election_service.get_all_elections(db)
+    return {"message": "List of all elections","elections":Elections}
 
 # Get election by ID Endpoint
 @router.get("/{election_id}")

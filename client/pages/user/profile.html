@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Profile</title>
   <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
   <style>
     body { display:flex; flex-direction:column; min-height:100vh; }
@@ -30,18 +31,19 @@
 </nav>
 
 <script src="../../script/app.js"></script>
-<script>
+<script >
+  
   var user = getCurrentUser();
   if (!user) window.location.href = '../../index.html';
 
-  function render() {
+  async function render() {
     // ─── Profile Header ────────────────────────
     document.getElementById('profile-header').innerHTML =
       '<div class="profile-topbar">' +
         '<div style="font-family:\'Playfair Display\',serif;font-size:18px;font-weight:700;">Profile</div>' +
         '<button class="icon-btn" style="color:rgba(255,255,255,0.8);" onclick="toast(\'Settings coming soon\')">⚙️</button>' +
       '</div>' +
-      '<div class="profile-avatar">👤</div>' +
+      '<div class="profile-avatar">'+ user.name.charAt(0)+'</div>' +
       '<div class="profile-name">' + user.name + '</div>' +
       '<div class="profile-id-text">ID: ' + user.id + '</div>';
 
@@ -57,7 +59,7 @@
       '</div>';
 
     // ─── Voting Summary ────────────────────────
-    var elections  = getElections();
+    var elections  = await getElections();
     var votedIn    = elections.filter(function(e) { return hasVotedInElection(user.id, e.id); });
     var allVotes   = getAllVotes()[user.id] || {};
     var totalCast  = Object.keys(allVotes).length;

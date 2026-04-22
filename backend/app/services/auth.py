@@ -1,65 +1,97 @@
 # app/services/auth.py
+# ─── Auth Service ─────────────────────────────────────────────────────────────
+# BUGS FIXED FROM ORIGINAL:
+#
+# 1. login_admin: subject={"id": admin.id_code} was a DICT.
+#    create_access_token does str(subject) → "{'id': 'admin'}" (a dict repr string).
+#    get_current_user then called get_admin_by_admin_id(db, "{'id': 'admin'}")
+#    which returned None → every admin request returned 401.
+#    FIX: subject=admin.id_code  (pass the string directly)
+#
+# 2. Field name mapping: UserCreateRequest now sends { name, id, index, course }
+#    instead of { fullname, student_id, index_number, department }.
+#    Service maps them to DB column names here.
+# ──────────────────────────────────────────────────────────────────────────────
 
 from fastapi import HTTPException
+from sqlalchemy.orm import Session
+
 import app.repositories.user as repo
-import app.core.security as security
 import app.repositories.admin as admin_repo
+import app.core.security as security
 
+def get_val(obj, key, default=None):
+    """Safely get value from either a Dict or an ORM Object."""
+    if isinstance(obj, dict):
+        return obj.get(key, default)
+    return getattr(obj, key, default)
 
-def signup_user(db, payload):
-    # Check if user exists
-    existing_user = repo.get_user_by_student_id(db, payload.student_id)
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User already exists")
+# ── Helpers ───────────────────────────────────────────────────────────────────
 
-    # Hash password
-    hashed_password = security.get_password_hash(payload.password)
-
-    # Prepare data
-    user_data = {
-        "fullname": payload.fullname,
-        "student_id": payload.student_id,
-        "index_number": payload.index_number,
-        "department": payload.department,
-        "hashed_password": hashed_password
+def _serialize_user(user) -> dict:
+    return {
+        "id":           get_val(user, "student_id"),
+        "name":         get_val(user, "fullname"),
+        "index":        get_val(user, "index_number"),
+        "course":       get_val(user, "department"),
+        "level":        str(get_val(user, "level", "400")),
+        "votingStatus": "Verified",
+        "createdAt":    int(user.created_at.timestamp() * 1000) if hasattr(user, 'created_at') and user.created_at else 0,
     }
 
-    # Save user
+
+# ── User auth ─────────────────────────────────────────────────────────────────
+
+def signup_user(db: Session, payload):
+    """payload is a UserCreateRequest with fields: name, id, index, course, password"""
+    existing = repo.get_user_by_student_id(db, payload.id)
+    if existing:
+        raise HTTPException(status_code=400, detail="Student ID already registered")
+
+    user_data = {
+        "fullname":        payload.name,
+        "student_id":      payload.id,
+        "index_number":    payload.index,
+        "department":      payload.course,
+        "hashed_password": security.get_password_hash(payload.password),
+    }
+
     new_user = repo.create_user(db, user_data)
+    token    = security.create_access_token(subject=new_user.student_id, role="user")
 
-    # Generate token
-    token = security.create_access_token(subject=new_user.student_id,role="user")
-
-    return new_user, token
+    return {"token": token, "user": _serialize_user(new_user)}
 
 
-def login_user(db, payload):
-    user = repo.get_user_by_student_id(db, payload.student_id)
 
+def login_user(db: Session, payload):
+    user = repo.get_user_by_student_id(db, payload.studentId)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not security.verify_password(payload.password, str(user.hashed_password)):
+    # Safe extraction
+    db_pass = get_val(user, "hashed_password")
+    user_id = get_val(user, "student_id")
+
+    if not security.verify_password(payload.password, str(db_pass)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = security.create_access_token(subject=user.student_id,role="user")
+    token = security.create_access_token(subject=user_id, role="user")
+    return {"token": token, "user": _serialize_user(user)}
 
-    return user, token
 
 
-def login_admin(db, payload):
-    admin = admin_repo.get_admin_by_id_code(db, payload.id_code)
+# ── Admin auth ─────────────────────────────────────────────────────────────────
 
+def login_admin(db: Session, payload):
+    admin = admin_repo.get_admin_by_id_code(db, payload.adminId)
     if not admin:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not security.verify_password(payload.password, str(admin.hashed_password)):
+    db_pass = get_val(admin, "hashed_password")
+    admin_id = get_val(admin, "id_code")
+
+    if not security.verify_password(payload.password, str(db_pass)):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    # 🔥 Important: differentiate token identity
-    token = security.create_access_token(
-        subject={"id": admin.id_code},
-        role="admin"
-    )
-
-    return admin, token
+    token = security.create_access_token(subject=admin_id, role="admin")
+    return {"token": token, "admin": {"id": admin_id}}

@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Elections</title>
     <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
   <style>body { display:flex; flex-direction:column; min-height:100vh; }</style>
 </head>
@@ -32,7 +33,8 @@
 </nav>
 
 <script src="../../script/app.js"></script>
-<script>
+<script >
+    
   var user = getCurrentUser();
   if (!user) window.location.href = '../../index.html';
 
@@ -43,8 +45,9 @@
     draft:    '<span class="badge badge-closed">DRAFT</span>'
   };
 
-  function render() {
-    var elections = getElections().filter(function(e) { return e.status !== 'draft'; });
+  async function render() {
+    var elections = await getElections();
+    elections = elections.filter(function(e) { return e.status !== 'draft'; });
     var html = '<div class="page-header fade-in"><div class="page-title">Active &amp; Upcoming Elections</div></div>';
 
     elections.forEach(function(el, i) {

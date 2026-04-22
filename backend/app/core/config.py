@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Error in your original code: ADMIN_USERNAME: str = Field(..., env="")
     ADMIN_USERNAME: str = Field(default="")
     ADMIN_PASSWORD: str = Field(default="")
+    ADMIN_ID_CODE: str = Field(default="")
 
     # In v2, it is recommended to use SettingsConfigDict
     model_config = SettingsConfigDict(

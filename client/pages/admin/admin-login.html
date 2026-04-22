@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Admin Login</title>
     <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
   <style>body { background: #f1f5f9; } .auth-screen { background: #f1f5f9; }</style>
 </head>
@@ -51,11 +52,11 @@
 <script>
   if (isAdmin()) window.location.href = './admin-dashboard.html';
 
-  function doAdminLogin() {
+ async function doAdminLogin() {
     var id = document.getElementById('admin-id').value.trim();
     var pw = document.getElementById('admin-pw').value.trim();
     if (!id || !pw) { toast('Please enter admin credentials', 'error'); return; }
-    if (adminLogin(id, pw)) {
+    if (await adminLogin(id, pw)) {
       toast('Admin access granted ✅', 'success');
       setTimeout(function() { window.location.href = './admin-dashboard.html'; }, 800);
     } else {

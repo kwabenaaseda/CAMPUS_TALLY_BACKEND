@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CampusTally – Register</title>
    <link rel="stylesheet" href="../../style/styles.css">
+  <link rel="icon" href="../../images/logo.png" type="image/png">
 
 </head>
 <body>
@@ -101,7 +102,7 @@
   // Auto-redirect if already logged in
   if (getCurrentUser()) window.location.href = './dashboard.html';
 
-  function doRegister() {
+  async function doRegister() {
     var name   = document.getElementById('reg-name').value.trim();
     var id     = document.getElementById('reg-id').value.trim();
     var index  = document.getElementById('reg-index').value.trim();
@@ -112,7 +113,7 @@
     if (!name || !id || !index || !course || !pw || !pw2) { toast('Please fill in all fields', 'error'); return; }
     if (pw !== pw2) { toast('Passwords do not match', 'error'); return; }
 
-    var result = registerUser({ name: name, id: id, index: index, course: course, password: pw });
+    var result = await registerUser({ name: name, id: id, index: index, course: course, password: pw });
     if (!result.ok) { toast(result.error, 'error'); return; }
 
     toast('Account created successfully! 🎉', 'success');

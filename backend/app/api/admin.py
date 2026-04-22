@@ -11,17 +11,11 @@ router = APIRouter(prefix="/api/admin", tags=["Admin"])
 #=== Authentication and Authorization routes for Admin ===#
 
 # Admin login Endpoint
-@router.post("/login", response_model=UL.AdminLoginResponse)
-async def admin_login(payload: UL.AdminLogin, db: Session = Depends(get_db)):
-    admin,token = auth_service.login_admin(db,payload)
-    return UL.AdminLoginResponse(
-        token=token,
-        success=True,
-        message="Admin Logged in successfully",
-        data={
-            "id_code":admin.id_code,
-            "fullname":admin.fullname,
-        }
+@router.post("/login", response_model=UL.AdminAuthResponse)
+async def admin_login(payload: UL.AdminLoginRequest, db: Session = Depends(get_db)):
+    token = auth_service.login_admin(db,payload)
+    return UL.AdminAuthResponse(
+        token=token["token"]
     )
 
 # Add new admin Endpoint
