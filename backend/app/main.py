@@ -31,8 +31,8 @@ app = FastAPI(
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 # CORS (Cross-Origin Resource Sharing) controls which origins can call this API.
 # In development, we allow all origins. In production, restrict to your domain.
-local_domains = ["http://localhost:8000,*"]
-prod_domains = [""]
+local_domains = ["http://localhost:8000","*"]
+prod_domains = ["https://campus-tally.netlify.app/"]
  
 def domain():
     if (settings.ENVIRONMENT == "development"): 
