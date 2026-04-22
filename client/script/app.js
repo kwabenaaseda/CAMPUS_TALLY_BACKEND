@@ -4,7 +4,7 @@
 var _BASE_API = (function () {
   var isDev = window.location.href.includes('localhost') ||
               window.location.href.includes('127.0.0.1');
-  return isDev ? 'http://localhost:8000/api' : 'https://campus-tally-backend.onrender.com/';
+  return isDev ? 'http://localhost:8000/api' : 'https://campus-tally-backend.onrender.com/api';
 }());
 
 
