@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     ADMIN_USERNAME: str = Field(default="")
     ADMIN_PASSWORD: str = Field(default="")
     ADMIN_ID_CODE: str = Field(default="")
+    ENVIRONMENT: str = Field(default="development")  # "development" or "production"
 
     # In v2, it is recommended to use SettingsConfigDict
     model_config = SettingsConfigDict(

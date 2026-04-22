@@ -21,7 +21,8 @@ def cast_vote(db: Session, student_id: str, election_id: str, position_index: in
       - voter must not have already voted for this position (409 if so)
     """
     # Validate election
-    election = election_repo.get_election_by_id(db, election_id)
+    election_or_query = election_repo.get_election_by_id(db, election_id)
+    election = election_or_query.first() if hasattr(election_or_query, "first") else election_or_query
     if not election:
         raise HTTPException(status_code=404, detail="Election not found")
     if election.status != "active":

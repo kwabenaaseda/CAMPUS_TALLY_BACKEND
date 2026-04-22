@@ -84,3 +84,19 @@ class ElectionListResponse(BaseModel):
 
 class ElectionSingleResponse(BaseModel):
     election: ElectionOut
+
+class ElectionResponse(BaseModel):
+    message: str
+    election: ElectionOut
+
+class ElectionUpdateRequest(BaseModel):
+    title:     Optional[str]
+    shortName: Optional[str]
+    category:  Optional[str]
+    status:    Optional[str]   # draft | upcoming | active | closed
+    startDate: Optional[str]
+    startTime: Optional[str]
+    endDate:   Optional[str]
+    endTime:   Optional[str]
+    positions: Optional[list[PositionIn]]
+

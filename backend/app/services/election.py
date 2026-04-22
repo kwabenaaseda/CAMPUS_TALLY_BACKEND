@@ -10,7 +10,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 import app.repositories.elections as repo
-from app.schemas.election import ElectionCreateRequest
+from app.schemas.election import ElectionCreateRequest, ElectionUpdateRequest
 
 
 # ── Serializer ─────────────────────────────────────────────────────────────────
@@ -92,12 +92,12 @@ def create_election(db: Session, payload: ElectionCreateRequest) -> dict:
         "end_time":   payload.endTime,
     }
 
-    positions = [p.model_dump() for p in payload.positions]
+    positions = [p.model_dump() for p in (payload.positions or [])]
     election  = repo.create_election(db, election_data, positions)
     return serialize_election(election)
 
 
-def update_election(db: Session, election_id: str, payload: ElectionCreateRequest) -> dict:
+def update_election(db: Session, election_id: str, payload: ElectionUpdateRequest) -> dict:
     election_data = {
         "title":      payload.title,
         "short_name": payload.shortName or payload.title,
@@ -109,7 +109,7 @@ def update_election(db: Session, election_id: str, payload: ElectionCreateReques
         "end_time":   payload.endTime,
     }
 
-    positions = [p.model_dump() for p in payload.positions]
+    positions = [p.model_dump() for p in (payload.positions or [])]
     election  = repo.update_election(db, election_id, election_data, positions)
     if not election:
         raise HTTPException(status_code=404, detail=f"Election '{election_id}' not found")

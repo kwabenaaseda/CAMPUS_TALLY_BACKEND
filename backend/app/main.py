@@ -31,9 +31,19 @@ app = FastAPI(
 # ─── CORS ─────────────────────────────────────────────────────────────────────
 # CORS (Cross-Origin Resource Sharing) controls which origins can call this API.
 # In development, we allow all origins. In production, restrict to your domain.
+local_domains = ["http://localhost:8000,*"]
+prod_domains = [""]
+ 
+def domain():
+    if (settings.ENVIRONMENT == "development"): 
+        return local_domains
+    else:
+        return prod_domains
+
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],         # Replace with your frontend URL in production
+    allow_origins=domain(),         # Replace with your frontend URL in production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
